@@ -203,7 +203,8 @@ bool allFolded(int numPlayers, Player players[]){
     return true;
 }
 
-//add things that take int amtCards and bool isStraight to implement patterns
+//add things that take int amtCards and bool isStraight to implement patterns. 
+//Will also need a separate promptplay function for first play during normal rounds, and for first round(check if min played)
 int promptPlay(Player& player, Card& card){
     if(player.hasFolded()){
         return -1;
