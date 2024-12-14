@@ -9,15 +9,24 @@
 #include <iostream>
 #include "Deck.h"
 #include "Player.h"
+#include <string>
 
 using namespace std;
+
+struct cardPlay{
+    int amtCards;
+    bool isStraight;
+    vector<int> cardPlayed;
+};
 
 int playFirstRound(Player[], int);
 int playRound(Player[], int, int);
 int findWithLowestCard(int, Player[]);
 bool isMyCardHigher(Card&, Card&);
 bool allFolded(int, Player[]);
-int promptPlay(Player&, Card&);
+int promptPlay(Player&, Card&); //will delete once new logic completed
+cardPlay promptFirstPlay(Player&, bool);
+cardPlay promptPlay(Player&, Card&, bool, int);
 bool sbWon(int, Player[]);
 void addWin(Player[], int);
 
@@ -222,8 +231,7 @@ bool allFolded(int numPlayers, Player players[]){
     return true;
 }
 
-//add things that take int amtCards and bool isStraight to implement patterns. 
-//Will also need a separate promptplay function for first play during normal rounds, and for first round(check if min played)
+//Will delete when logic remade
 int promptPlay(Player& player, Card& card){
     if(player.hasFolded()){
         return -1;
@@ -272,4 +280,206 @@ void addWin(Player playerList[], int numPlayers){
             playerList[i].addLoss();
         }
     }
+}
+
+//code this, no folding cus first play
+cardPlay promptFirstPlay(Player& player, bool isFirstRound){
+    cardPlay myPlay;
+    vector<int> cardPlayed;
+    bool isStraight = false;
+    int amtCards = 0;
+    
+    bool playableCardSelected = false;
+    bool doneSelecting = false;
+    int selection = 13;
+    cout<<"Choose the first play."<<endl;
+    player.displayHand();
+    while(!playableCardSelected && !doneSelecting){
+        cout<<player.getName()<<", which card will you play? Type the number of card."<<endl;
+        cin>>selection;
+        if(selection < 0 || selection > 12){
+            cout<<"Invalid input. Try again."<<endl;
+        }else if(player.getCard(selection).getPlayed()){
+            cout<<"That card has already been played. Try again."<<endl;
+        }else{
+            cout<<"That card is not a playable card. Try again."<<endl;
+        }
+        if(playableCardSelected == true && doneSelecting == false){
+            cardPlayed.push_back(selection);
+            amtCards++;
+            sort(cardPlayed.begin(), cardPlayed.end());
+            //check if valid + if straight
+            bool isValid = true;
+            bool diffHasBeenZero = false;
+            for(int i = 0; i < cardPlayed.size() - 1; i++){
+                if(cardPlayed.size() == 1){
+                    break;
+                }
+                int diff = player.getCard(i + 1).getVal() - player.getCard(i).getVal();
+                if(diff == 0){
+                    diffHasBeenZero = true;
+                }
+                if(diffHasBeenZero == true && diff > 0){
+                    cout<<"Invalid play. Resetting play."<<endl;
+                    isValid = false;
+                    break;
+                }
+                if(diff > 1){
+                    cout<<"Invalid play. Resetting play."<<endl;
+                    isValid = false;
+                    break;
+                }
+            }
+            if(diffHasBeenZero == false && cardPlayed.size() < 3){
+                cout<<"Invalid play. Resetting play."<<endl;
+                isValid = false;
+            }
+            if(isFirstRound){
+                Card lowestCard = player.getCard(0);
+                for(int i = 1; i < 13; i++){
+                    if(!isMyCardHigher(player.getCard(i), lowestCard)){
+                        lowestCard = player.getCard(i);
+                    }
+                }
+                bool lowBeenPlayed = false;
+                for(int i = 0; i < cardPlayed.size() - 1; i++){
+                    if(player.getCard(cardPlayed[i]).getVal() == lowestCard.getVal()){
+                        lowBeenPlayed = true;
+                    }
+                }
+                if(!lowBeenPlayed){
+                    cout<<"Invalid play. Smallest card not included in play. Resetting play."<<endl;
+                    isValid = false;
+                }
+            }
+            
+            if(!isValid){
+                cardPlayed.clear();
+                bool isStraight = false;
+                int amtCards = 0;
+                continue;
+            }
+            
+            string input;
+            cout<<"Is your selection complete? Type Y to complete selection, N to keep selecting"<<endl;
+            cin>>input;
+            
+            if(input == "Y" || input == "y"){
+                if(!diffHasBeenZero){
+                    isStraight = true;
+                }
+                doneSelecting = true;
+                myPlay.amtCards = amtCards;
+                myPlay.isStraight = isStraight;
+                myPlay.cardPlayed = cardPlayed;
+                cout<<"Selection complete."<<endl;
+                continue;
+
+            }
+            if(input != "N" && input != "n"){
+                cout<<"Invalid input, completing selection."<<endl;
+                if(!diffHasBeenZero){
+                    isStraight = true;
+                }
+                doneSelecting = true;
+                myPlay.amtCards = amtCards;
+                myPlay.isStraight = isStraight;
+                myPlay.cardPlayed = cardPlayed;
+                cout<<"Selection complete."<<endl;
+                continue;
+            }
+            cout<<"Continuing selection."<<endl;
+        }
+    }
+    return myPlay;
+}
+
+//diffs btw this and firstplay: must check for last card being higher, pattern being same as that of last play, no check for valid just same,
+cardPlay promptPlay(Player& player, Card& card, bool playIsStraight, int amtPlayed){
+    cardPlay myPlay;
+    vector<int> cardPlayed;
+    int amtCards = 0;
+    
+    bool playableCardSelected = false;
+    bool doneSelecting = false;
+    int selection = 13;
+    player.displayHand();
+    while(!playableCardSelected && !doneSelecting){
+        cout<<player.getName()<<", which card will you play? Type the number of card. Type -1 to fold."<<endl;
+        cin>>selection;
+        if(selection == -1){
+            cardPlayed.push_back(selection);
+            playableCardSelected = true;
+            amtCards++;
+            doneSelecting = true;
+        }
+        if(selection < 0 || selection > 12){
+            cout<<"Invalid input. Try again."<<endl;
+        }else if(player.getCard(selection).getPlayed()){
+            cout<<"That card has already been played. Try again."<<endl;
+        }else{
+            cardPlayed.push_back(selection);
+            amtCards++;
+            playableCardSelected = true;
+        }
+        if(playableCardSelected == true && amtCards == amtPlayed){
+            sort(cardPlayed.begin(), cardPlayed.end());
+            
+            //check if valid
+            bool isValid = true;
+            
+            if(!playIsStraight){
+                if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getVal() < card.getVal()){
+                    cout<<"Invalid play. Resetting play."<<endl;
+                    isValid = false;
+                }else if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getVal() == card.getVal()){
+                    if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getSuit() < card.getSuit()){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                    }
+                }
+                for(int i = 0; i < cardPlayed.size() - 1; i++){
+                    if(cardPlayed.size() == 1){
+                        break;
+                    }
+                    int diff = player.getCard(i + 1).getVal() - player.getCard(i).getVal();
+                    if(diff != 0){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                        break;
+                    }
+                }
+            }else{
+                for(int i = 0; i < cardPlayed.size() - 1; i++){
+                    if(cardPlayed.size() == 1){
+                        break;
+                    }
+                    int diff = player.getCard(i + 1).getVal() - player.getCard(i).getVal();
+                    if(diff != 1){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                        break;
+                    }
+                }
+                if(cardPlayed.size() < 3){
+                    cout<<"Invalid play. Resetting play."<<endl;
+                    isValid = false;
+                }
+            }
+            
+            if(!isValid){
+                cardPlayed.clear();
+                bool isStraight = false;
+                int amtCards = 0;
+                continue;
+            }else{
+                doneSelecting = true;
+                myPlay.amtCards = amtCards;
+                myPlay.isStraight = playIsStraight;
+                myPlay.cardPlayed = cardPlayed;
+                cout<<"Selection complete."<<endl;
+            }
+        }
+    }
+    return myPlay;
 }
