@@ -39,25 +39,42 @@ int main() {
     //play game
     bool donePlaying = false;
     while(donePlaying == false){
-        //play rounds
         bool isWinner = false;
-        int nextRoundStarter = playFirstRound(gamePlayers, gameSize);
+        //Check for 13straight + all2s
         for(int i = 0; i < gameSize; i++){
-            if(gamePlayers[i].hasWon() == true){
+            if(gamePlayers[i].has13Straight()){
+                cout<<gamePlayers[i].getName()<<" has won the game with 13 straight!"<<endl;
                 isWinner = true;
+                gamePlayers[i].addWin();
+                break;
+            }
+            if(gamePlayers[i].hasAllTwos()){
+                cout<<gamePlayers[i].getName()<<" has won the game with all 2s!"<<endl;
+                isWinner = true;
+                gamePlayers[i].addWin();
+                break;
             }
         }
-        while(isWinner == false){
-            cout<<gamePlayers[nextRoundStarter].getName()<<" will start the next round."<<endl;
-            nextRoundStarter = playRound(gamePlayers, nextRoundStarter, gameSize);
+        //play rounds
+        if(isWinner == false){
+            int nextRoundStarter = playFirstRound(gamePlayers, gameSize);
             for(int i = 0; i < gameSize; i++){
                 if(gamePlayers[i].hasWon() == true){
                     isWinner = true;
                 }
             }
+            while(isWinner == false){
+                cout<<gamePlayers[nextRoundStarter].getName()<<" will start the next round."<<endl;
+                nextRoundStarter = playRound(gamePlayers, nextRoundStarter, gameSize);
+                for(int i = 0; i < gameSize; i++){
+                    if(gamePlayers[i].hasWon() == true){
+                        isWinner = true;
+                    }
+                }
+            }
+            //declare winner
+            addWin(gamePlayers, gameSize);
         }
-        //declare winner
-        addWin(gamePlayers, gameSize);
         //prompt to play again
         string playagain;
         cout<<"Would you like to play another game? Type Y to play again or N to stop"<<endl;
@@ -213,7 +230,11 @@ int promptPlay(Player& player, Card& card){
     }
     int cardPlayed = 13;
     bool playableCardSelected = false;
-    cout<<"The current card is the "<<card.cardInfo()<<endl;
+    if(card.getVal() == -2){
+        cout<<"Choose the first play."<<endl;
+    }else{
+        cout<<"The current card is the "<<card.cardInfo()<<endl;
+    }
     player.displayHand();
     while(!playableCardSelected){
         cout<<player.getName()<<", which card will you play? Type the number of card. Type -1 to fold."<<endl;

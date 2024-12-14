@@ -29,7 +29,8 @@ class Player{
         bool equals(Player);
         void addWin();
         void addLoss();
-        
+        bool hasAllTwos();
+        bool has13Straight();
     private:
         Card hand[13];
         int wincount;

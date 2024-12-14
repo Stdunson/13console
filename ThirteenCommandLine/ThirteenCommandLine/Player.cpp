@@ -7,6 +7,7 @@
 
 #include "Player.h"
 #include <iostream>
+#include <vector>
 using namespace std;
 
 Player::Player(string pname){
@@ -106,4 +107,28 @@ void Player::addWin(){
 
 void Player::addLoss(){
     losscount++;
+}
+
+bool Player::hasAllTwos(){
+    int amt2s = 0;
+    for(int i = 0; i < 13; i++){
+        if(hand[i].getVal() == 13){
+            amt2s++;
+        }
+    }
+    return amt2s == 4;
+}
+
+bool Player::has13Straight(){
+    vector<Card> cardsHad;
+    cardsHad.push_back(hand[0]);
+    for(int i = 1; i < 13; i++){
+        for(int j = 0; j < cardsHad.size(); j++){
+            if(cardsHad[j].getVal() == hand[i].getVal()){
+                return false;
+            }
+        }
+        cardsHad.push_back(hand[i]);
+    }
+    return true;
 }
