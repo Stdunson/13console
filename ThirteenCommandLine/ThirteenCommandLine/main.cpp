@@ -9,17 +9,28 @@
 #include <iostream>
 #include "Deck.h"
 #include "Player.h"
+#include <string>
 
 using namespace std;
+
+struct cardPlay{
+    int amtCards;
+    bool isStraight;
+    vector<int> cardPlayed;
+};
 
 int playFirstRound(Player[], int);
 int playRound(Player[], int, int);
 int findWithLowestCard(int, Player[]);
 bool isMyCardHigher(Card&, Card&);
 bool allFolded(int, Player[]);
-int promptPlay(Player&, Card&);
+int promptPlay(Player&, Card&); //will delete once new logic completed
+cardPlay promptFirstPlay(Player&, bool);
+cardPlay promptPlay(Player&, vector<Card>&, bool, int);
 bool sbWon(int, Player[]);
 void addWin(Player[], int);
+void announceCards(vector<int>, Player&);
+vector<Card> doPlay(vector<int>, Player&);
 
 int main() {
     //specific to console based play, but have similar process for actual game
@@ -86,45 +97,51 @@ int main() {
     return 0;
 }
 
+//change card to an array sized based on the size of the first play
+//for folding, change condition to if it contains -1 at all, not ==
+//when removing + playing cards must use all the indexes in the play vector, prolly need a for loop
 int playFirstRound(Player playerList[], int numPlayers){
     bool playerHasWon = false;
     bool allPlayersHaveFolded = false;
     int currentPlayerIndex = 0;
+    vector<Card> currentCard;
     Deck gameDeck;
     gameDeck.shuffleDeck();
     gameDeck.dealDeck(numPlayers, playerList);
-    Card currentCard = Card(-2, SPADES);
     currentPlayerIndex = findWithLowestCard(numPlayers, playerList);
-    Card lowestCard = playerList[currentPlayerIndex].getCard(0);
-    int lowestCardIndex = 0;
-    for(int i = 1; i < 13; i++){
-        if(!isMyCardHigher(playerList[currentPlayerIndex].getCard(i), lowestCard)){
-            lowestCard = playerList[currentPlayerIndex].getCard(i);
-            lowestCardIndex = i;
-        }
+    cout<<playerList[currentPlayerIndex].getName()<<" will start the game."<<endl;
+    cardPlay currentPlay = promptFirstPlay(playerList[currentPlayerIndex], true);
+    announceCards(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+    //turn currentcard into card vector using for loop
+    currentCard = doPlay(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+    for(int i = 0; i < currentPlay.cardPlayed.size(); i++){
+        playerList[currentPlayerIndex].removeCard(currentPlay.cardPlayed[i]);
     }
-    currentCard = playerList[currentPlayerIndex].getCard(lowestCardIndex);
-    playerList[currentPlayerIndex].removeCard(lowestCardIndex);
-    cout<<playerList[currentPlayerIndex].getName()<<" will play the "<<lowestCard.cardInfo()<<endl;
     currentPlayerIndex = (currentPlayerIndex + 1) % numPlayers;
-    while (!allPlayersHaveFolded && !playerHasWon) {
+    while (!allPlayersHaveFolded && !playerHasWon){
         Player& currentPlayer = playerList[currentPlayerIndex];
         if (!currentPlayer.hasFolded()) {
-            int cardPlayed = promptPlay(currentPlayer, currentCard);
-            if (cardPlayed == -1) {
-                currentPlayer.fold();
-            }else{
-                cout << currentPlayer.getName() << " will play the "
-                     << currentPlayer.getCard(cardPlayed).cardInfo() << endl;
-                currentCard = currentPlayer.getCard(cardPlayed);
-                currentPlayer.removeCard(cardPlayed);
+            currentPlay = promptPlay(currentPlayer, currentCard, currentPlay.isStraight, currentPlay.amtCards);
+            bool gonFold = false;
+            for(int i = 0; i < currentPlay.cardPlayed.size(); i++){
+                if (currentPlay.cardPlayed[i] == -1) {
+                    currentPlayer.fold();
+                    gonFold = true;
+                    break;
+                }
+                if(!gonFold){
+                    announceCards(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+                    currentCard = doPlay(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+                    for(int i = 0; i < currentPlay.cardPlayed.size(); i++){
+                        currentPlayer.removeCard(currentPlay.cardPlayed[i]);
+                    }
+                }
             }
         }
         do{
             currentPlayerIndex = (currentPlayerIndex + 1) % numPlayers;
         }while (playerList[currentPlayerIndex].hasFolded() && playerList[currentPlayerIndex].hasWon());
         
-        cout<<"Checking for folds and wins"<<endl;
         allPlayersHaveFolded = allFolded(numPlayers, playerList);
         playerHasWon = sbWon(numPlayers, playerList);
     }
@@ -144,29 +161,42 @@ int playRound(Player playerList[], int firstPlayer, int numPlayers){
     bool playerHasWon = false;
     bool allPlayersHaveFolded = false;
     int currentPlayerIndex = 0;
-    Card currentCard = Card(-2, SPADES);
+    vector<Card> currentCard;
     currentPlayerIndex = firstPlayer;
-    while (!allPlayersHaveFolded && !playerHasWon) {
+    cardPlay currentPlay = promptFirstPlay(playerList[currentPlayerIndex], false);
+    announceCards(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+    currentCard = doPlay(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+    for(int i = 0; i < currentPlay.cardPlayed.size(); i++){
+        playerList[currentPlayerIndex].removeCard(currentPlay.cardPlayed[i]);
+    }
+    currentPlayerIndex = (currentPlayerIndex + 1) % numPlayers;
+    while (!allPlayersHaveFolded && !playerHasWon){
         Player& currentPlayer = playerList[currentPlayerIndex];
         if (!currentPlayer.hasFolded()) {
-            int cardPlayed = promptPlay(currentPlayer, currentCard);
-            if (cardPlayed == -1) {
-                currentPlayer.fold();
-            }else{
-                cout << currentPlayer.getName() << " will play the "
-                     << currentPlayer.getCard(cardPlayed).cardInfo() << endl;
-                currentCard = currentPlayer.getCard(cardPlayed);
-                currentPlayer.removeCard(cardPlayed);
+            currentPlay = promptPlay(currentPlayer, currentCard, currentPlay.isStraight, currentPlay.amtCards);
+            bool gonFold = false;
+            for(int i = 0; i < currentPlay.cardPlayed.size(); i++){
+                if (currentPlay.cardPlayed[i] == -1) {
+                    currentPlayer.fold();
+                    gonFold = true;
+                    break;
+                }
+                if(!gonFold){
+                    announceCards(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+                    currentCard = doPlay(currentPlay.cardPlayed, playerList[currentPlayerIndex]);
+                    for(int i = 0; i < currentPlay.cardPlayed.size(); i++){
+                        currentPlayer.removeCard(currentPlay.cardPlayed[i]);
+                    }
+                }
             }
         }
         do{
             currentPlayerIndex = (currentPlayerIndex + 1) % numPlayers;
         }while (playerList[currentPlayerIndex].hasFolded() && playerList[currentPlayerIndex].hasWon());
-
+        
         allPlayersHaveFolded = allFolded(numPlayers, playerList);
         playerHasWon = sbWon(numPlayers, playerList);
     }
-    
     int lastFolderIndex = 0;
     if(currentPlayerIndex == 0){
         lastFolderIndex = numPlayers - 1;
@@ -178,6 +208,7 @@ int playRound(Player playerList[], int firstPlayer, int numPlayers){
     }
     return lastFolderIndex;
 }
+    
 
 int findWithLowestCard(int numPlayers, Player players[]){
     Card lowestCard = players[0].getCard(0);
@@ -222,38 +253,6 @@ bool allFolded(int numPlayers, Player players[]){
     return true;
 }
 
-//add things that take int amtCards and bool isStraight to implement patterns. 
-//Will also need a separate promptplay function for first play during normal rounds, and for first round(check if min played)
-int promptPlay(Player& player, Card& card){
-    if(player.hasFolded()){
-        return -1;
-    }
-    int cardPlayed = 13;
-    bool playableCardSelected = false;
-    if(card.getVal() == -2){
-        cout<<"Choose the first play."<<endl;
-    }else{
-        cout<<"The current card is the "<<card.cardInfo()<<endl;
-    }
-    player.displayHand();
-    while(!playableCardSelected){
-        cout<<player.getName()<<", which card will you play? Type the number of card. Type -1 to fold."<<endl;
-        cin>>cardPlayed;
-        if(cardPlayed == -1){
-            playableCardSelected = true;
-        }else if(cardPlayed < -1 || cardPlayed > 12){
-            cout<<"Invalid input. Try again."<<endl;
-        }else if(isMyCardHigher(player.getCard(cardPlayed), card)){
-            playableCardSelected = true;
-        }else if(player.getCard(cardPlayed).getPlayed()){
-            cout<<"That card has already been played. Try again."<<endl;
-        }else{
-            cout<<"That card is not a playable card. Try again."<<endl;
-        }
-    }
-    return cardPlayed;
-}
-
 bool sbWon(int numPlayers, Player players[]){
     for(int i = 0; i < numPlayers; i++){
         if(players[i].hasWon() == true){
@@ -272,4 +271,290 @@ void addWin(Player playerList[], int numPlayers){
             playerList[i].addLoss();
         }
     }
+}
+
+//code this, no folding cus first play
+cardPlay promptFirstPlay(Player& player, bool isFirstRound){
+    cardPlay myPlay;
+    vector<int> cardPlayed;
+    bool isStraight = false;
+    int amtCards = 0;
+    
+    bool doneSelecting = false;
+    int selection = 13;
+    cout<<"Choose the first play."<<endl;
+    player.displayHand();
+    while(!doneSelecting){
+        bool playableCardSelected = false;
+        cout<<player.getName()<<", which card will you play? Type the number of card."<<endl;
+        cin>>selection;
+        if(selection < 0 || selection > 12){
+            cout<<"Invalid input. Try again."<<endl;
+        }else if(player.getCard(selection).getPlayed()){
+            cout<<"That card has already been played. Try again."<<endl;
+        }else{
+            cardPlayed.push_back(selection);
+            amtCards++;
+            playableCardSelected = true;
+        }
+        if(playableCardSelected == true && doneSelecting == false){
+            for(int i = 0; i < cardPlayed.size() - 1; i++){
+                for(int j = 0; j < cardPlayed.size() - i - 1; j++){
+                    if(player.getCard(cardPlayed[j]).getVal() > player.getCard(cardPlayed[j]).getVal()){
+                        int temp = cardPlayed[j + 1];
+                        cardPlayed[j + 1] = cardPlayed[j];
+                        cardPlayed[j] = temp;
+                    }
+                    if(player.getCard(cardPlayed[j]).getVal() == player.getCard(cardPlayed[j]).getVal()){
+                        if(player.getCard(cardPlayed[j]).getSuit() > player.getCard(cardPlayed[j]).getSuit()){
+                            int temp = cardPlayed[j + 1];
+                            cardPlayed[j + 1] = cardPlayed[j];
+                            cardPlayed[j] = temp;
+                        }
+                    }
+                }
+            }
+            //check if valid + if straight
+            bool isValid = true;
+            bool diffHasBeenZero = false;
+            if(cardPlayed.size() == 1){
+                diffHasBeenZero = true;
+            }else if(cardPlayed.size() == 2){
+                if(player.getCard(cardPlayed[1]).getVal() - player.getCard(cardPlayed[0]).getVal() == 1){
+                    diffHasBeenZero = false;
+                    continue;
+                }else if (player.getCard(cardPlayed[1]).getVal() - player.getCard(cardPlayed[0]).getVal() == 0){
+                    diffHasBeenZero = true;
+                }else{
+                    cout<<"Invalid play. Resetting play."<<endl;
+                    isValid = false;
+                }
+            }else{
+                diffHasBeenZero = false;
+                for(int i = 0; i < cardPlayed.size() - 1; i++){
+                    int diff = player.getCard(i + 1).getVal() - player.getCard(i).getVal();
+                    if(diff == 0){
+                        diffHasBeenZero = true;
+                    }
+                    if(diffHasBeenZero == true && diff > 0){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                        break;
+                    }
+                    if(diff > 1){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                        break;
+                    }
+                }
+            }
+            if(isFirstRound){
+                Card lowestCard = player.getCard(0);
+                for(int i = 1; i < 13; i++){
+                    if(!isMyCardHigher(player.getCard(i), lowestCard)){
+                        lowestCard = player.getCard(i);
+                    }
+                }
+                bool lowBeenPlayed = false;
+                for(int i = 0; i < cardPlayed.size(); i++){
+                    if(player.getCard(cardPlayed[i]).getVal() == lowestCard.getVal()){
+                        if(player.getCard(cardPlayed[i]).getSuit() == lowestCard.getSuit()){
+                            lowBeenPlayed = true;
+                        }
+                    }
+                }
+                if(!lowBeenPlayed){
+                    cout<<"Invalid play. Smallest card not included in play. Resetting play."<<endl;
+                    isValid = false;
+                }
+            }
+            
+            if(!isValid){
+                cardPlayed.clear();
+                isStraight = false;
+                amtCards = 0;
+                continue;
+            }
+            
+            string input;
+            cout<<"Is your selection complete? Type Y to complete selection, N to keep selecting"<<endl;
+            cin>>input;
+            
+            if(input == "Y" || input == "y"){
+                if(!diffHasBeenZero){
+                    isStraight = true;
+                }
+                doneSelecting = true;
+                myPlay.amtCards = amtCards;
+                myPlay.isStraight = isStraight;
+                myPlay.cardPlayed = cardPlayed;
+                cout<<"Selection complete."<<endl;
+                continue;
+
+            }
+            if(input != "N" && input != "n"){
+                cout<<"Invalid input, completing selection."<<endl;
+                if(!diffHasBeenZero){
+                    isStraight = true;
+                }
+                doneSelecting = true;
+                myPlay.amtCards = amtCards;
+                myPlay.isStraight = isStraight;
+                myPlay.cardPlayed = cardPlayed;
+                cout<<"Selection complete."<<endl;
+                continue;
+            }
+            cout<<"Continuing selection."<<endl;
+        }
+    }
+    return myPlay;
+}
+
+//diffs btw this and firstplay: must check for last card being higher, pattern being same as that of last play, no check for valid just same,
+cardPlay promptPlay(Player& player, vector<Card>& card, bool playIsStraight, int amtPlayed){
+    cardPlay myPlay;
+    vector<int> cardPlayed;
+    int amtCards = 0;
+    
+    bool doneSelecting = false;
+    int selection = 13;
+    player.displayHand();
+    while(!doneSelecting){
+        bool playableCardSelected = false;
+        cout<<player.getName()<<", which card will you play? Type the number of card. Type -1 to fold."<<endl;
+        cin>>selection;
+        if(selection == -1){
+            cardPlayed.push_back(selection);
+            playableCardSelected = true;
+            amtCards++;
+            doneSelecting = true;
+            myPlay.amtCards = amtCards;
+            myPlay.isStraight = playIsStraight;
+            myPlay.cardPlayed = cardPlayed;
+            break;
+        }
+        if(selection < 0 || selection > 12){
+            cout<<"Invalid input. Try again."<<endl;
+        }else if(player.getCard(selection).getPlayed()){
+            cout<<"That card has already been played. Try again."<<endl;
+        }else{
+            cardPlayed.push_back(selection);
+            amtCards++;
+            playableCardSelected = true;
+        }
+        if(playableCardSelected == true && amtCards == amtPlayed){
+            for(int i = 0; i < cardPlayed.size() - 1; i++){
+                for(int j = 0; j < cardPlayed.size() - i - 1; j++){
+                    if(player.getCard(cardPlayed[j]).getVal() > player.getCard(cardPlayed[j]).getVal()){
+                        int temp = cardPlayed[j + 1];
+                        cardPlayed[j + 1] = cardPlayed[j];
+                        cardPlayed[j] = temp;
+                    }
+                    if(player.getCard(cardPlayed[j]).getVal() == player.getCard(cardPlayed[j]).getVal()){
+                        if(player.getCard(cardPlayed[j]).getSuit() > player.getCard(cardPlayed[j]).getSuit()){
+                            int temp = cardPlayed[j + 1];
+                            cardPlayed[j + 1] = cardPlayed[j];
+                            cardPlayed[j] = temp;
+                        }
+                    }
+                }
+            }
+            for(int i = 0; i < card.size() - 1; i++){
+                for(int j = 0; j < card.size() - i - 1; j++){
+                    if(card[j].getVal() > card[j + 1].getVal()){
+                        Card temp = card[j + 1];
+                        card[j + 1] = card[j];
+                        card[j] = temp;
+                    }
+                    if(card[j].getVal() == card[j + 1].getVal()){
+                        if(card[j].getSuit() > card[j + 1].getSuit()){
+                            Card temp = card[j + 1];
+                            card[j + 1] = card[j];
+                            card[j] = temp;
+                        }
+                    }
+                }
+            }
+            
+            //check if valid
+            bool isValid = true;
+            
+            if(!playIsStraight){
+                if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getVal() < card[card.size() - 1].getVal()){
+                    cout<<"Invalid play. Resetting play."<<endl;
+                    isValid = false;
+                }else if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getVal() == card[card.size() - 1].getVal()){
+                    if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getSuit() < card[card.size() - 1].getSuit()){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                    }
+                }
+                for(int i = 0; i < cardPlayed.size() - 1; i++){
+                    if(cardPlayed.size() == 1){
+                        break;
+                    }
+                    int diff = player.getCard(cardPlayed[i + 1]).getVal() - player.getCard(cardPlayed[i]).getVal();
+                    if(diff != 0){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                        break;
+                    }
+                }
+            }else{
+                for(int i = 0; i < cardPlayed.size() - 1; i++){
+                    if(cardPlayed.size() == 1){
+                        break;
+                    }
+                    int diff = player.getCard(cardPlayed[i + 1]).getVal() - player.getCard(cardPlayed[i]).getVal();
+                    if(diff != 1){
+                        cout<<"Invalid play. Resetting play."<<endl;
+                        isValid = false;
+                        break;
+                    }
+                }
+                //check if highest higher than played highest
+                if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getVal() < card[card.size() - 1].getVal()){
+                    cout<<"Invalid play. Resetting play."<<endl;
+                    isValid = false;
+                }else if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getVal() == card[card.size() - 1].getVal()){
+                    if(player.getCard(cardPlayed[cardPlayed.size() - 1]).getSuit() < card[card.size() - 1].getSuit()){
+                        
+                    }
+                }
+            }
+            
+            if(!isValid){
+                cardPlayed.clear();
+                amtCards = 0;
+                continue;
+            }else{
+                doneSelecting = true;
+                myPlay.amtCards = amtCards;
+                myPlay.isStraight = playIsStraight;
+                myPlay.cardPlayed = cardPlayed;
+                cout<<"Selection complete."<<endl;
+            }
+        }
+    }
+    return myPlay;
+}
+
+void announceCards(vector<int> cards, Player& player){
+    cout<<player.getName()<<" will play the ";
+    for(int i = 0; i < cards.size(); i++){
+        cout<<player.getCard(cards[i]).cardInfo();
+        
+        if(i != cards.size() - 1){
+            cout<<" + ";
+        }
+    }
+    cout<<endl;
+}
+
+vector<Card> doPlay(vector<int> cards, Player& player){
+    vector<Card> output;
+    for(int i = 0; i < cards.size(); i++){
+        output.push_back(player.getCard(cards[i]));
+    }
+    return output;
 }
