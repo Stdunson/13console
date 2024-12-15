@@ -26,23 +26,6 @@ void Deck::shuffleDeck(){
         cards[i] = cards[j];
         cards[j] = temp;
     }
-    /*
-    Card tempdeck[52] = {};
-    for(int i = 0; i < 52; i++){
-        int x = 0;
-        do{
-            int num = rand() % 52;
-            if(tempdeck[num].getVal() == 0){
-                tempdeck[num].setVal(cards[i].getVal());
-                tempdeck[num].setSuit(cards[i].getSuit());
-                break;
-            }
-        }while(x != 1);
-    }
-    for(int l = 0; l < 52; l++){
-        cards[l] = tempdeck[l];
-    }
-    */
 }
 
 void Deck::dealDeck(int numplayers, Player gamePlayers[numplayers]){
